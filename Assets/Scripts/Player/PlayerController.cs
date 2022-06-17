@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.Events;
 using UnityEngine;
 
 [RequireComponent(typeof(PlayerMotor))]
@@ -23,9 +24,13 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private readonly float JumpCooldown = 1f;
     private bool CanJump = true;
 
+    [Header("Enviroment Input")]
+    public bool IsOnFloor = false;
+
     [HideInInspector] public bool CanMove = true;
 
     private PlayerMotor Motor;
+    private PlayerHealth Health;
 
     #endregion
 
@@ -35,6 +40,8 @@ public class PlayerController : MonoBehaviour
     void Start()
     {
         Motor = GetComponent<PlayerMotor>();
+        Health = GetComponent<PlayerHealth>();
+        Health.OnNoHealth.AddListener(Die);
     }
 
     // Update is called once per frame
@@ -61,9 +68,13 @@ public class PlayerController : MonoBehaviour
     }
 
     private void Jump() {
-        if (CanJump) {
+        if (CanJump && IsOnFloor) {
             StartCoroutine("JumpCoroutine");
         }
+    }
+
+    private void Die(){
+        Debug.Log("I dieed");
     }
 
     #endregion
