@@ -5,8 +5,8 @@ using UnityEngine;
 
 public class PlayerHealth : MonoBehaviour
 {
-    public static int maxHealth = 25;
-    public int currentHealth = 0;
+    public int maxHealth = 25;
+    public int currentHealth = 25;
 
 
     // Events
@@ -24,19 +24,20 @@ public class PlayerHealth : MonoBehaviour
 
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-
-
     public void LoseHealth(int health){
 
         currentHealth-=health;
-        if(currentHealth <= 0){
-            currentHealth = 0;
-            OnNoHealth.Invoke();
+        if (currentHealth > 0) return;
+        currentHealth = 0;
+        OnNoHealth.Invoke();
+    }
+
+    public void GainHealth(int healthAmount)
+    {
+        currentHealth += healthAmount;
+        if (currentHealth >= maxHealth)
+        {
+            currentHealth = maxHealth;
         }
     }
 

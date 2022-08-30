@@ -6,8 +6,8 @@ public class PlayerMotor : MonoBehaviour
 {
     #region Fields
 
-    [Range(0, 20)]
-    public int NormalSpeed = 7;
+    [Range(0, 50)]
+    public int NormalSpeed = 25;
     [HideInInspector] 
     public int Speed;
 
@@ -37,8 +37,9 @@ public class PlayerMotor : MonoBehaviour
 
     #region Methods
 
-    public void MoveRight(float horizontalDirection) {
-        RigidBody.velocity = new Vector2(Speed * horizontalDirection, RigidBody.velocity.y);
+    public void Move(float moveInput, Vector2 normalToGround) {
+        Vector2 force = Quaternion.AngleAxis(90,Vector3.back) * normalToGround * moveInput * Speed;
+        RigidBody.AddForce(force);
     }
 
     public void Jump(float force) {

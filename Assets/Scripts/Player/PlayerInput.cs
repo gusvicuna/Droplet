@@ -27,7 +27,7 @@ public class PlayerInput : MonoBehaviour
 
     private void CheckInput()
     {
-        Controller.MoveInput = Input.GetAxisRaw("Horizontal");
+        Controller.moveInput = Input.GetAxisRaw("Horizontal");
         CheckDropInput();
         CheckJumpInput();
         CheckDashInput();
@@ -37,11 +37,11 @@ public class PlayerInput : MonoBehaviour
     {
         if (Input.GetButton("Dash"))
         {
-            Controller.DashInput = true;
+            Controller.dashInput = true;
         }
         else
         {
-            Controller.DashInput = false;
+            Controller.dashInput = false;
         }
     }
 
@@ -49,11 +49,11 @@ public class PlayerInput : MonoBehaviour
     {
         if (Input.GetButton("Jump"))
         {
-            Controller.JumpInput = true;
+            Controller.jumpInput = true;
         }
         else
         {
-            Controller.JumpInput = false;
+            Controller.jumpInput = false;
         }
     }
 
@@ -61,11 +61,11 @@ public class PlayerInput : MonoBehaviour
     {
         if (Input.GetButton("Drop"))
         {
-            Controller.DropInput = true;
+            Controller.dropInput = true;
         }
         else
         {
-            Controller.DropInput = false;
+            Controller.dropInput = false;
         }
     }
 

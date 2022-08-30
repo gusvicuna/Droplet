@@ -22,7 +22,7 @@ public class PlayerEnviromentInput : MonoBehaviour
     {
         if(col.transform.tag == "Floor")
         {
-            playerController.IsOnFloor = true;
+            playerController.isOnFloor = true;
         }
     }
 
@@ -30,7 +30,7 @@ public class PlayerEnviromentInput : MonoBehaviour
     {
         if(col.transform.tag == "Floor")
         {
-            playerController.IsOnFloor = false;
+            playerController.isOnFloor = false;
         }
     }
 

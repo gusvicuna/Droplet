@@ -6,31 +6,34 @@ using UnityEngine;
 [RequireComponent(typeof(PlayerMotor))]
 public class PlayerController : MonoBehaviour
 {
-    #region Constants
-
-    #endregion
-
-
     #region Fields
 
     [Header("Player Input:")]
-    public bool JumpInput = false;
-    public bool DashInput = false;
-    public bool DropInput = false;
-    public float MoveInput = 0;
+    public bool jumpInput = false;
+    public bool dashInput = false;
+    public bool dropInput = false;
+    public float moveInput = 0;
 
     [Header("Jump Settings:")]
     [Range(0, 3)]
     [SerializeField] private readonly float JumpCooldown = 1f;
-    private bool CanJump = true;
+    private bool canJump = true;
 
     [Header("Enviroment Input")]
-    public bool IsOnFloor = false;
+    public bool isOnFloor = false;
 
-    [HideInInspector] public bool CanMove = true;
+    [SerializeField]
+    [Range(1,5)]
+    private float _normalGravity = 3.5f;
 
-    private PlayerMotor Motor;
-    private PlayerHealth Health;
+    [HideInInspector] public bool canMove = true;
+
+    private PlayerMotor motor;
+    private PlayerHealth health;
+    private PlayerContamination contamination;
+    private DropletGroundDetector groundDetector;
+    private DropletGFX gfx;
+    private Rigidbody2D rigidBody2D;
 
     #endregion
 
@@ -39,15 +42,34 @@ public class PlayerController : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        Motor = GetComponent<PlayerMotor>();
-        Health = GetComponent<PlayerHealth>();
-        Health.OnNoHealth.AddListener(Die);
+        motor = GetComponent<PlayerMotor>();
+        health = GetComponent<PlayerHealth>();
+        contamination = GetComponent<PlayerContamination>();
+        groundDetector = GetComponent<DropletGroundDetector>();
+        gfx = GetComponent<DropletGFX>();
+        rigidBody2D = GetComponent<Rigidbody2D>();
+
+        Invoke("AddListeners",1);
     }
 
     // Update is called once per frame
     void Update()
     {
+        gfx.RotateDroplet(groundDetector.NormalOfNearestGround * -1);
+
+        GroundDetection();
+
         InputToAction();
+    }
+
+    private void GroundDetection()
+    {
+        if(groundDetector.IsTouchingGround){
+            rigidBody2D.gravityScale = 1;
+        }
+        else{
+            rigidBody2D.gravityScale = _normalGravity;
+        }
     }
 
     private void FixedUpdate() 
@@ -60,15 +82,21 @@ public class PlayerController : MonoBehaviour
 
     #region Methods
 
+    private void AddListeners()
+    {
+        contamination.OnFullContaminated.AddListener(Die);
+        health.OnNoHealth.AddListener(Die);
+    }
+
     private void InputToAction() {
-        if (JumpInput) Jump();
+        if (jumpInput) Jump();
     }
     private void Move() {
-        if (CanMove) Motor.MoveRight(MoveInput);
+        if (canMove) motor.Move(moveInput, normalToGround: groundDetector.NormalOfNearestGround);
     }
 
     private void Jump() {
-        if (CanJump && IsOnFloor) {
+        if (canJump && isOnFloor) {
             StartCoroutine("JumpCoroutine");
         }
     }
@@ -83,11 +111,24 @@ public class PlayerController : MonoBehaviour
     #region Coroutines
 
     private IEnumerator JumpCoroutine() {
-        CanJump = false;
-        Motor.Jump(Motor.JumpForce);
+        canJump = false;
+        motor.Jump(motor.JumpForce);
         yield return new WaitForSeconds(JumpCooldown);
-        CanJump = true;
+        canJump = true;
     }
 
     #endregion
+
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        switch (other.transform.tag)
+        {
+            case "Enemy":
+                health.LoseHealth(5);
+                break;
+            case "ContaminationHazard":
+                contamination.AddContamination(5);
+                break;
+        }
+    }
 }

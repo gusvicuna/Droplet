@@ -5,6 +5,9 @@ TagManager:
   serializedVersion: 2
   tags:
   - Floor
+  - Enemy
+  - ContaminationHazard
+  - Drop
   layers:
   - Default
   - TransparentFX
@@ -13,7 +16,7 @@ TagManager:
   - Water
   - UI
   - 
-  - 
+  - Ground
   - 
   - 
   - 
@@ -39,6 +42,12 @@ TagManager:
   - 
   - 
   m_SortingLayers:
+  - name: Ground No Col
+    uniqueID: 739213937
+    locked: 0
+  - name: Ground
+    uniqueID: 935559465
+    locked: 0
   - name: Default
     uniqueID: 0
     locked: 0
