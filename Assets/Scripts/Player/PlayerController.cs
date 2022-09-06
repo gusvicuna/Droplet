@@ -19,6 +19,10 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private readonly float JumpCooldown = 1f;
     private bool canJump = true;
 
+    [Header("Stick to Ceiling Settings:")]
+    [SerializeField]
+    private float _stickyTime = 1;
+
     [Header("Enviroment Input")]
     public bool isOnFloor = false;
 
@@ -26,7 +30,8 @@ public class PlayerController : MonoBehaviour
     [Range(1,5)]
     private float _normalGravity = 3.5f;
 
-    [HideInInspector] public bool canMove = true;
+    [HideInInspector] 
+    public bool canMove = true;
 
     private PlayerMotor motor;
     private PlayerHealth health;
@@ -55,19 +60,35 @@ public class PlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        gfx.RotateDroplet(groundDetector.NormalOfNearestGround * -1);
-
         GroundDetection();
+
+        if(rigidBody2D.velocity.magnitude <= 0.1f){
+            gfx.Hover();
+        }
 
         InputToAction();
     }
 
     private void GroundDetection()
     {
-        if(groundDetector.IsTouchingGround){
-            rigidBody2D.gravityScale = 1;
+        gfx.RotateDroplet(groundDetector.NormalOfNearestGround * -1);
+        gfx.SetIsOnGround(isOnFloor || groundDetector.IsTouchingCeiling);
+
+        ChangeGravity();
+    }
+
+    private void ChangeGravity()
+    {
+        if (groundDetector.IsTouchingCeiling)
+        {
+            StartCoroutine("StickToCeilingCoroutine");
         }
-        else{
+        else if (isOnFloor)
+        {
+            rigidBody2D.gravityScale = 0.1f;
+        }
+        else
+        {
             rigidBody2D.gravityScale = _normalGravity;
         }
     }
@@ -91,12 +112,17 @@ public class PlayerController : MonoBehaviour
     private void InputToAction() {
         if (jumpInput) Jump();
     }
+
     private void Move() {
-        if (canMove) motor.Move(moveInput, normalToGround: groundDetector.NormalOfNearestGround);
+        if (canMove){
+            motor.Move(moveInput, normalToGround: groundDetector.NormalOfNearestGround);
+        }
+        gfx.Move(moveInput);
     }
 
     private void Jump() {
         if (canJump && isOnFloor) {
+            gfx.Jump();
             StartCoroutine("JumpCoroutine");
         }
     }
@@ -112,11 +138,17 @@ public class PlayerController : MonoBehaviour
 
     private IEnumerator JumpCoroutine() {
         canJump = false;
+        yield return new WaitForSeconds(0.2f);
         motor.Jump(motor.JumpForce);
         yield return new WaitForSeconds(JumpCooldown);
         canJump = true;
     }
 
+    private IEnumerator StickToCeilingCoroutine(){
+        rigidBody2D.gravityScale = 0;
+        yield return new WaitForSeconds(_stickyTime);
+        rigidBody2D.gravityScale = _normalGravity;
+    }
     #endregion
 
     private void OnTriggerEnter2D(Collider2D other)

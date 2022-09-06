@@ -32,6 +32,7 @@ public class DropletGroundDetector : MonoBehaviour
     private bool _isTouchingGround = false;
     private bool _isTouchingCeiling = false;
     public LayerMask groundLayerMask;
+    public LayerMask ceilingLayerMask;
 
     
     private CircleCollider2D circleCollider2D;
@@ -58,15 +59,15 @@ public class DropletGroundDetector : MonoBehaviour
             float angle = i * 360/_raysCount;
             Vector2 directionOfRay = Quaternion.AngleAxis(angle, Vector3.back) * Vector2.down;
 
-            if(210 > angle && angle > 90){
-                RaycastHit2D raycastHit = Physics2D.Raycast(circleCollider2D.bounds.center, directionOfRay, _maxDistanceToGround, groundLayerMask);
+            if(210 >= angle && angle >= 90){
+                RaycastHit2D raycastHit = Physics2D.Raycast(circleCollider2D.bounds.center, directionOfRay, _maxDistanceToGround, ceilingLayerMask);
                 if(raycastHit.collider != null){
                     didHitCeiling = true;
                     ray_color = Color.yellow;
                     float distance_to_ground = raycastHit.distance;
                     if(distance_to_ground < distance_to_nearest_ground){
                         distance_to_nearest_ground = distance_to_ground;
-                        _normalOfNearestCeiling = raycastHit.normal;
+                        _normalOfNearestGround = raycastHit.normal;
                     }
                 }
             }
