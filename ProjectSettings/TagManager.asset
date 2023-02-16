@@ -6,11 +6,16 @@ TagManager:
   tags:
   - Floor
   - Enemy
-  - ContaminationHazard
   - Drop
   - Droplet Drop
   - Interactable
   - WhiteFlower
+  - TemperatureModifier
+  - PressurePlate
+  - Water
+  - BlueFlower
+  - YellowFlower
+  - ContaminationModifier
   layers:
   - Default
   - TransparentFX

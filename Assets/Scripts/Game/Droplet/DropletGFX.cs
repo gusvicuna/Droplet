@@ -4,10 +4,20 @@ using UnityEngine;
 
 public class DropletGFX : MonoBehaviour
 {
-    [SerializeField]
     private Animator _bodyAnimator;
-    [SerializeField]
     private SpriteRenderer _bodySpriteRenderer;
+    [SerializeField]
+    private Animator _vaporAnimator;
+    [SerializeField]
+    private Animator _liquidAnimator;
+    [SerializeField]
+    private Animator _solidAnimator;
+    [SerializeField]
+    private SpriteRenderer _vaporSpriteRenderer;
+    [SerializeField]
+    private SpriteRenderer _liquidSrpiteRenderer;
+    [SerializeField]
+    private SpriteRenderer _solidSpriteRenderer;
     [SerializeField]
     private Animator _eyesAnimator;
     [SerializeField]
@@ -15,7 +25,8 @@ public class DropletGFX : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        
+        _bodySpriteRenderer = _liquidSrpiteRenderer;
+        _bodyAnimator = _liquidAnimator;
     }
 
     // Update is called once per frame
@@ -66,5 +77,28 @@ public class DropletGFX : MonoBehaviour
         else{
             _bodyAnimator.SetBool("isMovingHorizontally", false);
         }
+    }
+
+    public void OnContaminated(){
+        _bodySpriteRenderer.color = Color.gray;
+    }
+
+    public void Vaporize(){
+        _bodyAnimator = _vaporAnimator;
+        _bodySpriteRenderer = _vaporSpriteRenderer;
+    }
+
+    public void Liquify(){
+        _bodyAnimator = _liquidAnimator;
+        _bodySpriteRenderer = _liquidSrpiteRenderer;
+    }
+
+    public void Solidify(){
+        _bodyAnimator = _solidAnimator;
+        _bodySpriteRenderer = _solidSpriteRenderer;
+    }
+
+    public void SetImmune(bool isImmune){
+        _bodyAnimator.SetBool("isImmuneToDamage", isImmune);
     }
 }

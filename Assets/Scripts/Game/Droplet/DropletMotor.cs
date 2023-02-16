@@ -7,19 +7,15 @@ public class DropletMotor : MonoBehaviour
     #region Fields
 
     [Range(0, 50)]
-    public int NormalMaxSpeed = 10;
+    public float normalMaxSpeed = 10;
+    [Range(0, 1)]
+    public float contaminationSpeedMultiplier = 0.5f;
     [HideInInspector] 
-    public int aceleration = 25;
+    public float aceleration = 1;
 
     [Header("Jump Settings:")]
     [Range(15, 25)]
     public float JumpForce = 18;
-
-    [Header("Dash Settings:")]
-    [SerializeField]
-    [Range(10, 30)]
-    private readonly int DashSpeedBonus = 14;
-    public bool IsDashing = false;
 
     private Rigidbody2D rigidBody;
 
@@ -36,46 +32,20 @@ public class DropletMotor : MonoBehaviour
 
     #region Methods
 
-    public void Move(float moveInput, Vector2 normalToGround) {
-        Vector2 force = Quaternion.AngleAxis(90,Vector3.back) * normalToGround * moveInput * aceleration;
-        if(System.Math.Abs(rigidBody.velocity.x) < NormalMaxSpeed){
-            rigidBody.AddForce(force);
+    public void Move(float moveInput, Vector2 normalToGround, bool slide) {
+        Vector2 direction = Quaternion.AngleAxis(90,Vector3.back) * normalToGround * moveInput;
+        if(slide){
+            if(System.Math.Abs(rigidBody.velocity.x) < normalMaxSpeed){
+                rigidBody.AddForce(direction * aceleration);
+            }
+        }
+        else{
+            transform.Translate(direction * normalMaxSpeed * Time.deltaTime);
         }
     }
 
-    public void Jump(float force) {
-        rigidBody.velocity = new Vector2(rigidBody.velocity.x, force);
-    }
-
-    internal void Dash() {
-        StartCoroutine("DashCoroutine");
-    }
-
-    public IEnumerator DashCoroutine() {
-        IsDashing = true;
-        ResetVerticalSpeed();
-        ActivateGravity(false);
-        aceleration = DashSpeedBonus;
-        while (IsDashing) {
-            yield return null;
-        }
-        ActivateGravity(true);
-        aceleration = NormalMaxSpeed;
-    }
-
-    public void ResetVerticalSpeed() {
-        rigidBody.velocity = new Vector2(0, 0);
-    }
-
-
-    public void ActivateGravity(bool activate) {
-        if (activate) rigidBody.gravityScale = 4;
-        else rigidBody.gravityScale = 0;
-    }
-
-    public void FlipGravity(bool flip) {
-        if (!flip) rigidBody.gravityScale = 4;
-        else rigidBody.gravityScale = -4;
+    public void Jump(Vector2 force) {
+        rigidBody.velocity = force;
     }
 
     #endregion

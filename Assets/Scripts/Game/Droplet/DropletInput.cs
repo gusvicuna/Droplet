@@ -8,6 +8,7 @@ public class DropletInput : MonoBehaviour
     #region Fields
 
     private DropletController Controller;
+    public bool isActive = false;
 
     #endregion
 
@@ -17,6 +18,7 @@ public class DropletInput : MonoBehaviour
     void Start()
     {
         Controller = GetComponent<DropletController>();
+        isActive = true;
     }
 
     // Update is called once per frame
@@ -27,16 +29,65 @@ public class DropletInput : MonoBehaviour
 
     private void CheckInput()
     {
-        Controller.moveInput = Input.GetAxisRaw("Horizontal");
+        CheckMovementInput();
         CheckDropInput();
         CheckJumpInput();
         CheckDashInput();
         CheckCreateFollowerInput();
+        CheckSolidifyInput();
+        CheckLiquifyInput();
+        CheckVaporizeInput();
+    }
+
+    private void CheckSolidifyInput()
+    {
+        if (Input.GetButtonDown("Solidify") && isActive)
+        {
+            Controller.solidifyInput = true;
+        }
+        else
+        {
+            Controller.solidifyInput = false;
+        }
+    }
+        private void CheckLiquifyInput()
+    {
+        if (Input.GetButtonDown("Liquify") && isActive)
+        {
+            Controller.liquifyInput = true;
+        }
+        else
+        {
+            Controller.liquifyInput = false;
+        }
+    }
+        private void CheckVaporizeInput()
+    {
+        if (Input.GetButtonDown("Vaporize") && isActive)
+        {
+            Controller.vaporizeInput = true;
+        }
+        else
+        {
+            Controller.vaporizeInput = false;
+        }
+    }
+
+    private void CheckMovementInput()
+    {
+        if (isActive)
+        {
+            Controller.moveInput = Input.GetAxisRaw("Horizontal");
+        }
+        else
+        {
+            Controller.moveInput = 0;
+        }
     }
 
     private void CheckDashInput()
     {
-        if (Input.GetButtonDown("Dash"))
+        if (Input.GetButtonDown("Dash") && isActive)
         {
             Controller.dashInput = true;
         }
@@ -48,7 +99,7 @@ public class DropletInput : MonoBehaviour
 
     private void CheckJumpInput()
     {
-        if (Input.GetButtonDown("Jump"))
+        if (Input.GetButtonDown("Jump") && isActive)
         {
             Controller.jumpInput = true;
         }
@@ -60,7 +111,7 @@ public class DropletInput : MonoBehaviour
 
     private void CheckDropInput()
     {
-        if (Input.GetButtonDown("Drop"))
+        if (Input.GetButtonDown("Drop") && isActive)
         {
             Controller.dropInput = true;
         }
@@ -71,7 +122,7 @@ public class DropletInput : MonoBehaviour
     }
 
     private void CheckCreateFollowerInput(){
-        if(Input.GetButtonDown("Create Follower")){
+        if(Input.GetButtonDown("Create Follower") && isActive){
             Controller.createFollowerInput = true;
         }
         else{

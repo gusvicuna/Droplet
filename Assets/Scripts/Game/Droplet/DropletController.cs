@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.Events;
 using UnityEngine;
+using System;
 
 [RequireComponent(typeof(DropletMotor))]
 public class DropletController : MonoBehaviour
@@ -12,6 +13,9 @@ public class DropletController : MonoBehaviour
     public bool jumpInput = false;
     public bool dashInput = false;
     public bool dropInput = false;
+    public bool solidifyInput = false;
+    public bool liquifyInput = false;
+    public bool vaporizeInput = false;
     public float moveInput = 0;
     public bool createFollowerInput = false;
 
@@ -21,15 +25,15 @@ public class DropletController : MonoBehaviour
     private bool canJump = true;
 
     [Header("Stick to Ceiling Settings:")]
-    [SerializeField]
-    private float _stickyTime = 1;
+    public float stickyTime = 1;
 
     [Header("Enviroment Input")]
     public bool isOnFloor = false;
+    [HideInInspector]
+    public bool isInWater = false;
 
-    [SerializeField]
     [Range(1,5)]
-    private float _normalGravity = 3.5f;
+    public float normalGravity = 3.5f;
 
     [Header("Drop Follower")]
     [SerializeField]
@@ -39,40 +43,73 @@ public class DropletController : MonoBehaviour
 
     [HideInInspector] 
     public bool canMove = true;
+    [HideInInspector]
+    public bool isContaminated = false;
 
-    private DropletMotor motor;
-    private DropletHealth health;
-    private DropletContamination contamination;
-    private DropletGroundDetector groundDetector;
-    private DropletGFX gfx;
-    private Rigidbody2D rigidBody2D;
-    private DropletFollow dropletFollow;
-    private DropletScore dropletScore;
+    public GameObject vaporBody;
+    public GameObject waterBody;
+    public GameObject solidBody;
+
+    [HideInInspector]
+    public Health health;
+    [HideInInspector]
+    public Contamination contamination;
+    [HideInInspector]
+    public Temperature temperature;
+    [HideInInspector]
+    public DropletMotor motor;
+    [HideInInspector]
+    public DropletGroundDetector groundDetector;
+    [HideInInspector]
+    public DropletGFX gfx;
+    [HideInInspector]
+    public Rigidbody2D rigidBody2D;
+    [HideInInspector]
+    public DropletFollow dropletFollow;
+    [HideInInspector]
+    public DropletScore score;
+    [HideInInspector]
+    public DropletPhysicStateMachine physicStateMachine;
+    private StatusChangeFeedbackText statusChangeText;
+
+    public UnityEvent OnFinished;
+    public UnityEvent Die;
+
+    public UnityEvent OnGetComponents;
 
     #endregion
 
 
     #region Unity Methods
-    // Start is called before the first frame update
-    void Start()
-    {
+
+    private void Awake() {
         motor = GetComponent<DropletMotor>();
-        health = GetComponent<DropletHealth>();
-        contamination = GetComponent<DropletContamination>();
+        health = GetComponent<Health>();
+        temperature = GetComponent<Temperature>();
+        contamination = GetComponent<Contamination>();
         groundDetector = GetComponent<DropletGroundDetector>();
         gfx = GetComponent<DropletGFX>();
         rigidBody2D = GetComponent<Rigidbody2D>();
         dropletFollow = GetComponent<DropletFollow>();
-        dropletScore = GetComponent<DropletScore>();
+        score = GetComponent<DropletScore>();
+        statusChangeText = GetComponentInChildren<StatusChangeFeedbackText>();
 
-        Invoke("AddListeners",1);
+        physicStateMachine = new DropletPhysicStateMachine(this);
+        physicStateMachine.Initialize(physicStateMachine.liquidState);
+    }
+    // Start is called before the first frame update
+    void Start()
+    {
+        OnGetComponents.Invoke();
+
+        AddListeners();
     }
 
     // Update is called once per frame
     void Update()
     {
+        physicStateMachine.Update();
         UpdateGraphics();
-
         InputToAction();
     }
 
@@ -87,10 +124,16 @@ public class DropletController : MonoBehaviour
     #region Methods
 
     private void AddDrop(){
-        if(health.currentHealth>_createFollowerCost){
-            health.LoseHealth(_createFollowerCost);
+        if(health.CurrentHealth>_createFollowerCost){
+            health.Decrement(_createFollowerCost);
             dropletFollow.AddDrop(_dropFollowerPrefab);
         }
+    }
+
+    private void OnContaminated(){
+        isContaminated = true;
+        motor.normalMaxSpeed = motor.normalMaxSpeed * motor.contaminationSpeedMultiplier;
+        gfx.OnContaminated();
     }
 
     private void UpdateGraphics()
@@ -98,58 +141,76 @@ public class DropletController : MonoBehaviour
         gfx.RotateDroplet(groundDetector.NormalOfNearestGround * -1);
         gfx.SetIsOnGround(isOnFloor || groundDetector.IsTouchingCeiling);
         gfx.SetIsMoving(System.Math.Abs(rigidBody2D.velocity.y) <= 10);
-
-        ChangeGravity();
-    }
-
-    private void ChangeGravity()
-    {
-        if (groundDetector.IsTouchingCeiling)
-        {
-            StartCoroutine("StickToCeilingCoroutine");
-        }
-        else if (isOnFloor)
-        {
-            rigidBody2D.gravityScale = 0.1f;
-        }
-        else
-        {
-            rigidBody2D.gravityScale = _normalGravity;
-        }
     }
 
     private void AddListeners()
     {
-        contamination.OnFullContaminated.AddListener(Die);
-        health.OnNoHealth.AddListener(Die);
+        contamination.ContaminationAtFull += OnDeath;
+        contamination.ContaminationAtHalf += OnContaminated;
+        health.HealthIsZero += OnDeath;
     }
 
     private void InputToAction() {
         if (jumpInput) Jump();
         if (createFollowerInput) AddDrop();
+        if (vaporizeInput) Vaporize();
+        if (liquifyInput) Liquify();
+        if (solidifyInput) Solidify();
     }
 
     private void Move() {
         if (canMove){
-            if(groundDetector.IsTouchingCeiling){
-                motor.Move(moveInput, normalToGround: groundDetector.NormalOfNearestGround * -1);
+            if(isOnFloor){
+                motor.Move(moveInput, groundDetector.NormalOfNearestGround, physicStateMachine.CurrentState != physicStateMachine.gasState);
             }
             else{
-                motor.Move(moveInput, normalToGround: groundDetector.NormalOfNearestGround);
+                motor.Move(moveInput, Vector2.up, physicStateMachine.CurrentState != physicStateMachine.gasState);
             }
         }
         gfx.Move(moveInput);
     }
 
     private void Jump() {
-        if (canJump && isOnFloor) {
-            gfx.Jump();
-            StartCoroutine("JumpCoroutine");
+        if (canJump) {
+            if(physicStateMachine.gasState == physicStateMachine.CurrentState || isOnFloor){
+                gfx.Jump();
+                StartCoroutine(JumpCoroutine());
+            }
         }
     }
 
-    private void Die(){
-        Debug.Log("I dieed");
+    private void Vaporize(){
+        temperature.CurrentTemperature = 110;
+    }
+    private void Liquify(){
+        temperature.CurrentTemperature = 30;
+    }
+    private void Solidify(){
+        temperature.CurrentTemperature = -10;
+    }
+
+    private void OnDeath(){
+        score.deathCounts +=1;
+        Die.Invoke();
+    }
+
+    private void FinishLevel()
+    {
+        score.CalculateScore(health.CurrentHealth);
+        OnFinished.Invoke();
+    }
+
+    public void LoadPlayerData(PlayerData playerData, int level){
+        Debug.Log(playerData.ToString());
+        score.LoadPlayerData(playerData, level);
+    }
+
+    public void AddTemperature(int deltaTemperature){
+        temperature.Increase(deltaTemperature);
+    }
+
+    public void StartStickCoroutine(){
+        StartCoroutine(StickToCeilingCoroutine());
     }
 
     #endregion
@@ -160,15 +221,20 @@ public class DropletController : MonoBehaviour
     private IEnumerator JumpCoroutine() {
         canJump = false;
         yield return new WaitForSeconds(0.2f);
-        motor.Jump(motor.JumpForce);
+        if(physicStateMachine.CurrentState == physicStateMachine.gasState){
+            motor.Jump(Vector2.down * motor.JumpForce * 0.2f);
+        }
+        else{
+            motor.Jump(Vector2.up * motor.JumpForce);
+        }
         yield return new WaitForSeconds(JumpCooldown);
         canJump = true;
     }
 
-    private IEnumerator StickToCeilingCoroutine(){
-        rigidBody2D.gravityScale = 0;
-        yield return new WaitForSeconds(_stickyTime);
-        rigidBody2D.gravityScale = _normalGravity;
+    public IEnumerator StickToCeilingCoroutine(){
+        rigidBody2D.gravityScale = -0.1f;
+        yield return new WaitForSeconds(stickyTime);
+        rigidBody2D.gravityScale = normalGravity;
     }
     #endregion
 
@@ -176,27 +242,105 @@ public class DropletController : MonoBehaviour
     {
         switch (other.transform.tag)
         {
-            case "Enemy":
-                health.LoseHealth(5);
-                break;
-            case "ContaminationHazard":
-                contamination.AddContamination(5);
-                break;
             case "Drop":
-                health.GainHealth(10);
+                health.Increment(10);
                 Destroy(other.gameObject);
                 break;
+
             case "WhiteFlower":
-                dropletScore.whiteFlowersCount += 1;
-                other.GetComponent<Flower>().Bloom(contamination.contaminationPercent >= contamination.contaminationToBeContaminated);
+                score.whiteFlowersCount += 1;
+                if(isContaminated){
+                    score.LosePoints(score.whiteFlowerScore);
+                    statusChangeText.ShowText(-score.whiteFlowerScore, "score");
+                }
+                else{
+                    score.WinPoints(score.whiteFlowerScore);
+                    statusChangeText.ShowText(score.whiteFlowerScore, "score");
+                }
+                other.GetComponent<Flower>().Bloom(isContaminated);
                 break;
+
             case "YellowFlower":
-                dropletScore.redFlowersCount += 1;
-                other.GetComponent<Flower>().Bloom(contamination.contaminationPercent >= contamination.contaminationToBeContaminated);
+                score.yellowFlowersCount += 1;
+                if(isContaminated){
+                    score.LosePoints(score.yellowFlowerScore);
+                    statusChangeText.ShowText(-score.yellowFlowerScore, "score");
+                }
+                else{
+                    score.WinPoints(score.yellowFlowerScore);
+                    statusChangeText.ShowText(score.yellowFlowerScore, "score");
+                }
+                other.GetComponent<Flower>().Bloom(isContaminated);
                 break;
+
             case "BlueFlower":
-                dropletScore.blueFlowersCount +=1;
-                other.GetComponent<Flower>().Bloom(contamination.contaminationPercent >= contamination.contaminationToBeContaminated);
+                score.blueFlowersCount +=1;
+                if(isContaminated){
+                    score.LosePoints(score.blueFlowerScore);
+                    statusChangeText.ShowText(-score.blueFlowerScore, "score");
+                }
+                else{
+                    score.WinPoints(score.blueFlowerScore);
+                    statusChangeText.ShowText(score.blueFlowerScore, "score");
+                }
+                other.GetComponent<Flower>().Bloom(isContaminated);
+                break;
+
+            case "Water":
+                isInWater = true;
+                rigidBody2D.velocity = new Vector2(rigidBody2D.velocity.x, rigidBody2D.velocity.y * 0.1f);
+                break;
+
+            case "Finish":
+                FinishLevel();
+                break;
+        }
+    }
+
+    private void OnTriggerStay2D(Collider2D other) {
+        switch(other.tag){
+                case "ContaminationModifier":
+                    ContaminationModifier contaminator = other.GetComponent<ContaminationModifier>();
+                    contamination.AddContamination(contaminator.contaminationAmount);
+                    break;
+
+                case "TemperatureModifier":
+                    TemperatureModifier temperatureModifier = other.GetComponent<TemperatureModifier>();
+                    AddTemperature(temperatureModifier.deltaTemperature);
+                    break;
+        }
+    }
+
+    private void OnTriggerExit2D(Collider2D other) {
+        switch(other.tag){
+            case "Water":
+                isInWater = false;
+                break;
+        }
+    }
+
+    private void OnCollisionEnter2D(Collision2D other) {
+        switch(other.gameObject.tag){
+            case "Enemy":
+                Enemy enemy = other.gameObject.GetComponent<Enemy>();
+                health.Decrement(enemy.damage);
+                break;
+            case "PressurePlate":
+                PressurePlate pressurePlate = other.gameObject.GetComponent<PressurePlate>();
+                pressurePlate.Toggle(health.CurrentHealth);
+                break;
+        }
+    }
+
+    private void OnCollisionStay2D(Collision2D other) {
+        switch(other.gameObject.tag){
+            case "ContaminationHazard":
+                ContaminationModifier contaminator = other.gameObject.GetComponent<ContaminationModifier>();
+                contamination.AddContamination(contaminator.contaminationAmount);
+                break;
+            case "TemperatureModifier":
+                TemperatureModifier temperatureModifier = other.gameObject.GetComponent<TemperatureModifier>();
+                temperature.Increase(temperatureModifier.deltaTemperature);
                 break;
         }
     }

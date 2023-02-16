@@ -10,9 +10,9 @@ public class DropletScore : MonoBehaviour
     public int whiteFlowerScore = 10;
     [HideInInspector]
     public int whiteFlowersCount = 0;
-    public int redFlowerScore = 15;
+    public int yellowFlowerScore = 15;
     [HideInInspector]
-    public int redFlowersCount = 0;
+    public int yellowFlowersCount = 0;
     public int blueFlowerScore = 20;
     [HideInInspector]
     public int blueFlowersCount = 0;
@@ -60,11 +60,18 @@ public class DropletScore : MonoBehaviour
         }
     }
 
+    public void WinPoints(int points){
+        score += points;
+    }
+
     public void CalculateScore(int finalMass){
-        score += whiteFlowerScore * whiteFlowersCount + redFlowerScore * redFlowersCount + blueFlowerScore * blueFlowersCount;
         score += maxTimeScore;
         score += finalMass * finalMassScoreMultiplier;
         LosePoints(timeFromStart);
         LosePoints(deathPenalty * deathCounts);
+    }
+
+    public void LoadPlayerData(PlayerData playerData, int level){
+        deathCounts = playerData.levels[level]["deathCounts"];
     }
 }
